@@ -1,0 +1,181 @@
+<!doctype html>
+<html lang="en"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<meta name="referrer" content="no-referrer">
+<title>Password Strength Analyzer &amp; Security Suggestion Tool</title>
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
+<style>
+:root{--bg:#0f172a;--card:#1e293b;--tx:#e2e8f0;--mut:#94a3b8;--ac:#38bdf8;--ok:#22c55e;--warn:#f59e0b;--bad:#ef4444}
+*{box-sizing:border-box}body{margin:0;font-family:system-ui,Segoe UI,Arial;background:var(--bg);color:var(--tx);font-size:14px;line-height:1.45}
+header{padding:14px 22px;border-bottom:1px solid #334155;display:flex;gap:14px;align-items:center;flex-wrap:wrap}
+h1{font-size:18px;margin:0;flex:1;min-width:260px}nav button{background:none;border:0;color:var(--mut);padding:8px 14px;cursor:pointer;font-size:14px;border-radius:6px}
+nav button.on{background:var(--card);color:var(--ac)}main{max-width:1100px;margin:auto;padding:18px}
+.card{background:var(--card);border-radius:10px;padding:16px;margin-bottom:14px}.grid2{display:grid;gap:14px;grid-template-columns:repeat(auto-fit,minmax(320px,1fr))}
+input[type=text],input[type=password],input[type=number],select{width:100%;padding:10px;background:#0b1220;color:var(--tx);border:1px solid #334155;border-radius:6px;font:inherit}
+label{font-size:12px;color:var(--mut);display:block;margin:8px 0 3px}.row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+button.b{background:#334155;color:var(--tx);border:0;padding:8px 12px;border-radius:6px;cursor:pointer;font:inherit}button.pri{background:var(--ac);color:#04283a;font-weight:600}
+.meter{height:14px;background:#0b1220;border-radius:99px;overflow:hidden;margin:10px 0 6px}.fill{height:100%;width:0;transition:width .25s,background .25s}
+.big{font-size:22px;font-weight:700}.mut{color:var(--mut)}.pill{font-size:11px;background:#334155;border-radius:4px;padding:2px 7px;color:var(--mut)}
+ul.f{list-style:none;padding:0;margin:6px 0}ul.f li{padding:3px 0}.good::before{content:"✓ ";color:var(--ok)}.warn::before{content:"⚠ ";color:var(--warn)}.bad::before{content:"✖ ";color:var(--bad)}
+.badge{padding:3px 10px;border-radius:99px;font-weight:700;font-size:12px;color:#000}.pass{background:var(--ok)}.fail{background:var(--bad);color:#fff}
+.kpis{display:grid;gap:10px;grid-template-columns:repeat(auto-fit,minmax(130px,1fr))}.kpi b{display:block;font-size:22px}.kpi span{color:var(--mut);font-size:12px}
+.charts{display:grid;gap:12px;grid-template-columns:repeat(auto-fit,minmax(310px,1fr))}.charts canvas{max-height:230px}
+table{width:100%;border-collapse:collapse}td,th{padding:6px;border-bottom:1px solid #334155;text-align:left;font-size:13px}
+.hidden{display:none}.out{font-family:ui-monospace,Consolas,monospace;font-size:16px;background:#0b1220;padding:10px;border-radius:6px;word-break:break-all}
+h3{margin:12px 0 4px;font-size:14px}details summary{cursor:pointer;color:var(--ac)}
+</style></head><body>
+<header><h1>🔐 Password Strength Analyzer &amp; Security Suggestion Tool</h1>
+<nav><button class="on" data-t="an">Analyzer</button><button data-t="gen">Generator</button><button data-t="dash">Dashboard</button><button data-t="learn">Learn</button></nav></header>
+<main>
+
+<section id="an">
+ <div class="card">
+  <p class="mut" style="margin-top:0">🔒 Your password is analysed in memory only. It is never stored, logged or sent to any third party. Use demo passwords for screenshots and never enter a password you use for a real account on a shared or untrusted machine.</p>
+  <label for="pw">Password</label>
+  <div class="row"><input id="pw" type="password" autocomplete="off" autocapitalize="off" spellcheck="false" style="flex:1;min-width:220px" placeholder="Type a password to analyse">
+   <button class="b" id="showBtn" type="button">👁 Show password</button></div>
+  <p class="mut" style="font-size:12px;margin:4px 0">Showing a password on screen exposes it to shoulder-surfing and screen sharing - keep it hidden unless you need to check a typo.</p>
+  <div class="meter"><div class="fill" id="fill"></div></div>
+  <div class="row"><span class="big" id="cls">—</span><span class="mut" id="scoreTxt">Score: —/100</span></div>
+  <div class="row" style="margin-top:8px"><span class="mut">Try a demo case:</span>
+   <button class="b" data-demo="123456">123456</button><button class="b" data-demo="Password123!">Password123!</button>
+   <button class="b" data-demo="aaaaaaaaaaaaaaaa">aaaa…(16)</button><button class="b" data-demo="qwerty2026!">qwerty2026!</button>
+   <button class="b" id="demoRand">Random 20-char</button></div>
+ </div>
+
+ <div class="grid2">
+  <div class="card"><h3 style="margin-top:0">Findings</h3><ul class="f" id="findings"><li class="mut">Start typing…</li></ul>
+   <h3>Suggestions</h3><ul id="suggest" style="padding-left:18px;margin:4px 0"></ul>
+   <details><summary>General password hygiene</summary><ul id="hygiene" style="padding-left:18px"></ul></details></div>
+  <div class="card"><h3 style="margin-top:0">Optional context <span class="pill">demo data only · never stored</span></h3>
+   <label>First name</label><input id="ctxName" type="text" autocomplete="off" placeholder="e.g. Rahul">
+   <label>Birth year</label><input id="ctxYear" type="text" autocomplete="off" maxlength="4" placeholder="e.g. 2003">
+   <label>Company / college</label><input id="ctxOrg" type="text" autocomplete="off" placeholder="e.g. Sunrise College">
+   <p class="mut" style="font-size:12px">Compared locally to warn about predictable personal details. Attackers often try names and years first.</p>
+   <h3>Policy check <span class="pill">separate from strength</span></h3>
+   <div class="row"><label style="margin:0">Min length</label><input id="polMin" type="number" min="1" max="128" value="12" style="width:80px">
+    <label style="margin:0"><input type="checkbox" id="polCommon" checked> common-password check</label>
+    <label style="margin:0"><input type="checkbox" id="polPersonal" checked> personal-info check</label></div>
+   <div style="margin-top:8px"><span class="badge" id="polBadge">—</span></div><ul class="f" id="polList"></ul>
+   <p class="mut" style="font-size:12px;margin:0" id="polNote"></p></div>
+ </div>
+
+ <div class="grid2">
+  <div class="card"><h3 style="margin-top:0">Length, characters &amp; entropy</h3><table id="metrics"></table>
+   <p class="mut" style="font-size:12px" id="entNote"></p></div>
+  <div class="card"><h3 style="margin-top:0">Guess resistance <span class="pill" id="grLabel">Educational estimate only</span></h3><table id="gr"></table>
+   <p class="mut" style="font-size:12px" id="grNote"></p></div>
+ </div>
+ <div class="card"><div class="row"><button class="b pri" id="saveBtn">Save anonymous stats to dashboard</button>
+  <span class="mut" id="saveMsg">Saves only score, class, length and pattern counts - never the password.</span></div>
+  <p class="mut" style="font-size:12px;margin:8px 0 0" id="disc"></p></div>
+</section>
+
+<section id="gen" class="hidden">
+ <div class="grid2">
+  <div class="card"><h3 style="margin-top:0">Random password</h3>
+   <div class="row"><label style="margin:0">Length</label><select id="gLen" style="width:90px"><option>16</option><option selected>20</option><option>24</option></select></div>
+   <div class="row" style="margin:8px 0"><label style="margin:0"><input type="checkbox" id="gU" checked> Uppercase</label><label style="margin:0"><input type="checkbox" id="gL" checked> Lowercase</label>
+    <label style="margin:0"><input type="checkbox" id="gN" checked> Numbers</label><label style="margin:0"><input type="checkbox" id="gS" checked> Symbols</label></div>
+   <button class="b pri" id="gBtn">Generate</button> <button class="b" id="gCopy">Copy</button> <button class="b" id="gAnalyze">Analyse it</button>
+   <div class="out" id="gOut" style="margin-top:10px">—</div><p class="mut" id="gMsg" style="font-size:12px"></p>
+   <p class="mut" style="font-size:12px">Generated with Python's <code>secrets</code> module (cryptographically secure). The <code>random</code> module is for simulations - its output can be predicted. Nothing generated here is stored.</p></div>
+  <div class="card"><h3 style="margin-top:0">Passphrase</h3>
+   <div class="row"><label style="margin:0">Words</label><select id="pWords" style="width:90px"><option>4</option><option selected>5</option><option>6</option><option>7</option></select></div>
+   <div style="margin-top:8px"><button class="b pri" id="pBtn">Generate passphrase</button> <button class="b" id="pAnalyze">Analyse it</button></div>
+   <div class="out" id="pOut" style="margin-top:10px">—</div><p class="mut" id="pMsg" style="font-size:12px"></p>
+   <p class="mut" style="font-size:12px">A passphrase of several random, unrelated words is long and easy to type and remember. Randomness matters: a famous quote or lyric is not random.</p></div>
+ </div>
+</section>
+
+<section id="dash" class="hidden">
+ <div class="row" style="margin-bottom:10px"><button class="b pri" id="seedBtn">Load demo statistics</button><button class="b" id="clearBtn">Clear statistics</button>
+  <span class="mut">Aggregate metadata only - the dashboard can never show an actual password.</span></div>
+ <div class="kpis" id="kpis"></div><br>
+ <div class="charts"><div class="card"><canvas id="c1"></canvas></div><div class="card"><canvas id="c2"></canvas></div><div class="card"><canvas id="c3"></canvas></div>
+  <div class="card"><canvas id="c4"></canvas></div><div class="card"><canvas id="c5"></canvas></div></div>
+</section>
+
+<section id="learn" class="hidden"><div class="card" id="learnBody"></div></section>
+</main>
+<script>
+const $=id=>document.getElementById(id);
+function el(t,x,c){const e=document.createElement(t);if(x!==undefined&&x!==null)e.textContent=x;if(c)e.className=c;return e}
+async function api(url,body,method){const r=await fetch(url,{method:method||(body?'POST':'GET'),headers:{'Content-Type':'application/json'},body:body?JSON.stringify(body):undefined});
+ const d=await r.json().catch(()=>({}));if(!r.ok)throw new Error(d.error||'Request failed');return d}
+const COL={'VERY WEAK':'#ef4444','WEAK':'#f97316','MODERATE':'#eab308','STRONG':'#22c55e','VERY STRONG':'#10b981'};
+
+document.querySelectorAll('nav button').forEach(b=>b.onclick=()=>{document.querySelectorAll('nav button').forEach(x=>x.classList.toggle('on',x===b));
+ ['an','gen','dash','learn'].forEach(s=>$(s).classList.toggle('hidden',s!==b.dataset.t));if(b.dataset.t==='dash')loadStats()});
+
+// ---------- analyzer ----------
+let seq=0,timer=null;
+$('showBtn').onclick=()=>{const h=$('pw').type==='password';$('pw').type=h?'text':'password';$('showBtn').textContent=h?'🙈 Hide password':'👁 Show password'};
+['pw','ctxName','ctxYear','ctxOrg','polMin','polCommon','polPersonal'].forEach(id=>$(id).addEventListener('input',()=>{clearTimeout(timer);timer=setTimeout(()=>analyze(false),180)}));
+document.querySelectorAll('[data-demo]').forEach(b=>b.onclick=()=>{$('pw').value=b.dataset.demo;analyze(false)});
+$('demoRand').onclick=async()=>{const d=await api('/api/generate-password',{length:20});$('pw').value=d.password;analyze(false)};
+$('saveBtn').onclick=()=>analyze(true);
+function payload(record){return{password:$('pw').value,record:record,context:{first_name:$('ctxName').value,birth_year:$('ctxYear').value,organization:$('ctxOrg').value},
+ policy:{minimum_length:parseInt($('polMin').value)||12,common_password_check:$('polCommon').checked,personal_info_check:$('polPersonal').checked}}}
+async function analyze(record){
+ if(!$('pw').value){reset();return}
+ const my=++seq;let r;try{r=await api('/api/analyze',payload(record))}catch(e){if(my===seq)$('saveMsg').textContent=e.message;return}
+ if(my!==seq)return;render(r);if(record)$('saveMsg').textContent='Saved anonymous metadata (score, class, length, pattern count).'}
+function reset(){$('fill').style.width='0';$('cls').textContent='—';$('cls').style.color='';$('scoreTxt').textContent='Score: —/100';
+ ['findings','suggest','hygiene','polList','metrics','gr'].forEach(i=>$(i).replaceChildren());$('polBadge').textContent='—';$('polBadge').className='badge'}
+function render(r){
+ $('fill').style.width=r.score+'%';$('fill').style.background=COL[r.classification];$('cls').textContent=r.classification;$('cls').style.color=COL[r.classification];$('scoreTxt').textContent='Score: '+r.score+'/100';
+ const f=$('findings');f.replaceChildren();r.findings.forEach(x=>f.append(el('li',x.message,x.severity)));
+ const s=$('suggest');s.replaceChildren();r.suggestions.forEach(x=>s.append(el('li',x)));
+ const h=$('hygiene');h.replaceChildren();r.hygiene.forEach(x=>h.append(el('li',x)));
+ const m=$('metrics');m.replaceChildren();
+ [['Length',r.length_analysis.length+' - '+r.length_analysis.band],['Character types',r.character_analysis.types.join(', ')||'none'],
+  ['Unique characters',r.character_analysis.unique_count+' ('+Math.round(r.character_analysis.unique_ratio*100)+'% of length)'],
+  ['Theoretical entropy',r.entropy.theoretical_bits+' bits (assumes random characters)'],['Effective entropy',r.entropy.effective_bits+' bits (pattern-aware)']]
+  .forEach(([k,v])=>{const tr=el('tr');tr.append(el('th',k),el('td',v));m.append(tr)});
+ $('entNote').textContent=r.entropy.note;
+ const g=$('gr');g.replaceChildren();r.guess_resistance.scenarios.forEach(x=>{const tr=el('tr');tr.append(el('td',x.name+' ('+x.assumption+')'),el('td',x.estimate));g.append(tr)});
+ $('grLabel').textContent=r.guess_resistance.label;$('grNote').textContent=r.guess_resistance.caveat;
+ const p=r.policy;$('polBadge').textContent=p.result;$('polBadge').className='badge '+(p.result==='POLICY PASS'?'pass':'fail');
+ const pl=$('polList');pl.replaceChildren();p.checks.forEach(c=>pl.append(el('li',c.name+': '+c.message,c.passed?'good':'bad')));$('polNote').textContent=p.note;
+ $('disc').textContent=r.disclaimer}
+
+// ---------- generator ----------
+$('gBtn').onclick=async()=>{try{const d=await api('/api/generate-password',{length:parseInt($('gLen').value),uppercase:$('gU').checked,lowercase:$('gL').checked,numbers:$('gN').checked,symbols:$('gS').checked});
+ $('gOut').textContent=d.password;$('gMsg').textContent=''}catch(e){$('gMsg').textContent=e.message}};
+$('gCopy').onclick=async()=>{const t=$('gOut').textContent;if(t&&t!=='—'){try{await navigator.clipboard.writeText(t);$('gMsg').textContent='Copied. Paste it into your password manager.'}catch(e){$('gMsg').textContent='Copy failed - select the text manually.'}}};
+function toAnalyzer(t){if(!t||t==='—')return;document.querySelector('nav button[data-t=an]').click();$('pw').value=t;analyze(false)}
+$('gAnalyze').onclick=()=>toAnalyzer($('gOut').textContent);$('pAnalyze').onclick=()=>toAnalyzer($('pOut').textContent);
+$('pBtn').onclick=async()=>{const d=await api('/api/generate-passphrase',{words:parseInt($('pWords').value)});$('pOut').textContent=d.passphrase;$('pMsg').textContent=d.note};
+
+// ---------- dashboard ----------
+$('seedBtn').onclick=async()=>{await api('/api/demo-seed',{});loadStats()};
+$('clearBtn').onclick=async()=>{if(confirm('Delete all statistics?')){await api('/api/history',null,'DELETE');loadStats()}};
+const charts={};
+function chart(id,type,labels,data,title,colors){if(charts[id]){const c=charts[id];c.data.labels=labels;c.data.datasets[0].data=data;c.update();return}
+ charts[id]=new Chart($(id),{type,data:{labels,datasets:[{data,backgroundColor:colors||'#38bdf8'}]},options:{plugins:{title:{display:true,text:title,color:'#e2e8f0'},legend:{display:type==='doughnut',labels:{color:'#e2e8f0'}}},
+ scales:type==='doughnut'?{}:{x:{ticks:{color:'#94a3b8'}},y:{ticks:{color:'#94a3b8',precision:0},beginAtZero:true}}}})}
+async function loadStats(){const s=await api('/api/dashboard/stats');const k=$('kpis');k.replaceChildren();
+ [['Total analyses',s.total],['Very weak',s.classes['VERY WEAK']],['Weak',s.classes['WEAK']],['Moderate',s.classes['MODERATE']],['Strong',s.classes['STRONG']],['Very strong',s.classes['VERY STRONG']],['Average score',s.average_score]]
+  .forEach(([n,v])=>{const d=el('div',null,'card kpi');d.append(el('b',v),el('span',n));k.append(d)});
+ const names=Object.keys(s.classes);
+ chart('c1','doughnut',names,names.map(n=>s.classes[n]),'Strength distribution',names.map(n=>COL[n]));
+ chart('c2','bar',['0-19','20-39','40-59','60-79','80-100'],s.score_buckets,'Score distribution',['#ef4444','#f97316','#eab308','#22c55e','#10b981']);
+ chart('c3','bar',s.weaknesses.map(x=>x[0].replace(/_/g,' ')),s.weaknesses.map(x=>x[1]),'Most common weakness types');
+ chart('c4','bar',['<8','8-11','12-15','16-19','20+'],s.length_buckets,'Password length distribution');
+ chart('c5','bar',s.patterns.map(x=>x[0].replace(/_/g,' ')),s.patterns.map(x=>x[1]),'Pattern detection frequency')}
+
+// ---------- learn ----------
+const LEARN=[
+['Length + unpredictability beat composition rules','"Password123!" has upper, lower, number and symbol, yet it is one of the first things an attacker tries. What matters is length, randomness, avoiding patterns, and not using common passwords.'],
+['Entropy (and its limits)','Entropy ≈ length × log2(pool size) measures how many random guesses would be needed - but only if every character was chosen at random. Humans are predictable, so this tool also discounts recognised patterns.'],
+['Passphrases','Several random, unrelated words are long, easy to remember and strong. Randomness is the key: song lyrics and famous quotes are not random.'],
+['Reuse and credential stuffing','When one site is breached, attackers automatically try the same email/password on other sites. A unique password per account limits the damage to one account.'],
+['Why MFA still matters','Even a strong password can be phished or stolen by malware. A second factor (an app or hardware key) stops most account takeovers that a password alone cannot.'],
+['Password managers','They generate and store a unique, random password for every account, so you only remember one strong master passphrase.'],
+['How sites should store passwords','Never plaintext or plain SHA-256. Use a salted, deliberately slow hash (Argon2, bcrypt, scrypt). Run "python hashing_demo.py" in the project folder to see salting and verification. Hashing is one-way; encryption is reversible with a key.'],
+['Guessing difficulty is not one number','Real resistance depends on the attacker model, how predictable the password is, the hashing algorithm and work factor, rate limiting, and whether the attack is online or offline. Treat any "time to crack" figure as an educational estimate.'],
+['Modern password policy','Prefer a reasonable minimum length (e.g. 12+), allow long passwords and spaces, block common/breached passwords, and avoid forcing periodic changes unless there is evidence of compromise (NIST SP 800-63B).'],
+['Authentication is a system','Strong password + MFA + rate limiting + secure hashing + lockout/abuse protection + session security + phishing protection + monitoring. No single piece is enough.']];
+LEARN.forEach(([h,p])=>{const d=el('div');d.append(el('h3',h),el('p',p));$('learnBody').append(d)});
+</script></body></html>
